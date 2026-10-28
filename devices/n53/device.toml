@@ -1,0 +1,27 @@
+# iPhone 5S (Global), N53AP. Apple A7 / S5L8960X, the same SoC as the iPad mini 2.
+schema = 1
+kind = "hardware.device"
+
+[device]
+profile = "n53"
+name = "iPhone 5S (Global)"
+apple_products = ["iPhone6,2"]
+dt_compatible = ["apple,n53"]
+
+[match.dfu]
+chip = 0x8960
+board = 0x02
+
+[match.linux]
+product = "N53 Recovery"
+
+[boot]
+methods = ["checkm8-pongo"]
+
+[firmware]
+recipe = "firmware.json" # Public recipe with no firmware bytes and no IPSW.
+
+[support]
+wifi = false # BCM4334-family SDIO; the J71b BCM4355 recipe does not apply.
+usb_serial = true # RAM-only ACM gadget. Not yet booted on hardware.
+usb_network = true # RAM-only NCM gadget. Not yet booted on hardware.

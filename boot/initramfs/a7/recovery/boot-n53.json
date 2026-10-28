@@ -1,0 +1,3 @@
+{
+  "bootargs": "chosen.bootargs=n53.recovery=1 console=tty0 loglevel=7 ignore_loglevel fbcon=map:0 vt.global_cursor_default=0\n"
+}

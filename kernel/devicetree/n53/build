@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+board=n53
+compatible=apple,n53
+soc=apple,s5l8960x
+dtb_name=s5l8960x-n53.dtb
+kernel_build='' headers='' output=''
+while (($#)); do
+  case "$1" in
+    --kernel-build) kernel_build=$2; shift 2;;
+    --headers) headers=$2; shift 2;;
+    --output) output=$2; shift 2;;
+    *) echo "Unknown argument: $1" >&2; exit 2;;
+  esac
+done
+src="$kernel_build/arch/arm64/boot/dts/apple/$dtb_name"
+if [[ ! -f "$src" || ! -f "$headers/dt-bindings/pinctrl/apple.h" || -z "$output" || -e "$output" ]]; then
+  echo "Usage: ./kernel/devicetree/$board/build --kernel-build KERNEL_OUTPUT --headers KERNEL_SOURCE/include --output $board.dtb" >&2
+  exit 2
+fi
+python3 - "$src" "$compatible" "$soc" <<'PY'
+import pathlib, sys
+data = pathlib.Path(sys.argv[1]).read_bytes()
+compatible, soc = sys.argv[2], sys.argv[3]
+if data[:4] != b'\xd0\x0d\xfe\xed':
+    raise SystemExit('Device tree is not an FDT')
+for text in (compatible, soc):
+    if (text + '\0').encode() not in data:
+        raise SystemExit('Device tree is missing ' + text)
+if b'apple,j71b\x00' in data:
+    raise SystemExit('Refusing J71b device tree for ' + compatible)
+PY
+mkdir -p "$(dirname "$output")"
+cp "$src" "$output"
+python3 -c 'import hashlib,sys; print("DTB: " + sys.argv[2] + " (SHA-256 " + hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest() + ")" )' "$output" "$output"

@@ -1,0 +1,28 @@
+#!/bin/busybox sh
+# USB NCM and ACM for the iPhone 5S peripheral DWC2 controller.
+set -eu
+board=$(tr '\000' '\n' < /proc/device-tree/compatible | head -1)
+case "$board" in
+    apple,n51) name='N51 Recovery'; product_id=0x5a51 ;;
+    apple,n53) name='N53 Recovery'; product_id=0x5a53 ;;
+    *) echo 'iPhone 5S USB gadget refused this board'; exit 1 ;;
+esac
+mkdir -p /sys/kernel/config
+mount -t configfs -o nodev,noexec,nosuid configfs /sys/kernel/config
+g=/sys/kernel/config/usb_gadget/linux-recovery
+[ ! -e "$g" ]
+mkdir "$g"
+echo 0x05ac > "$g/idVendor"
+printf '%s\n' "$product_id" > "$g/idProduct"
+mkdir -p "$g/strings/0x409" "$g/configs/c.1/strings/0x409"
+echo 'Orchard' > "$g/strings/0x409/manufacturer"
+printf '%s\n' "$name" > "$g/strings/0x409/product"
+tr -d '\n' < /proc/sys/kernel/random/boot_id > "$g/strings/0x409/serialnumber"
+echo 'USB network and serial' > "$g/configs/c.1/strings/0x409/configuration"
+echo 500 > "$g/configs/c.1/MaxPower"
+mkdir "$g/functions/ncm.usb0" "$g/functions/acm.usb0"
+ln -s "$g/functions/ncm.usb0" "$g/configs/c.1/ncm.usb0"
+ln -s "$g/functions/acm.usb0" "$g/configs/c.1/acm.usb0"
+set -- /sys/class/udc/*
+[ "$#" -eq 1 ] && [ -e "$1" ]
+printf '%s\n' "${1##*/}" > "$g/UDC"
